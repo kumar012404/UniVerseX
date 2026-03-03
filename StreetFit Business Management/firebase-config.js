@@ -6,12 +6,12 @@
 // ========== FIREBASE CONFIG ==========
 // REPLACE THESE WITH YOUR FIREBASE PROJECT CONFIG
 const firebaseConfig = {
-    apiKey: "AIzaSyDndv7Lp68Xhb-KU2tIo28YFwcI03AX8Y8",
-    authDomain: "streetfit-4c0b2.firebaseapp.com",
-    projectId: "streetfit-4c0b2",
-    storageBucket: "streetfit-4c0b2.firebasestorage.app",
-    messagingSenderId: "878167942999",
-    appId: "1:878167942999:web:623831d518335cfbcd0012"
+    apiKey: "AIzaSyBDQKTSPF9s4B7qesRpQEjgABKmsJNyGSA",
+    authDomain: "streetfitx-c05ba.firebaseapp.com",
+    projectId: "streetfitx-c05ba",
+    storageBucket: "streetfitx-c05ba.firebasestorage.app",
+    messagingSenderId: "843544709537",
+    appId: "1:843544709537:web:c8563b4f6b9e2a65f6a3e0"
 };
 
 // ========== CACHE SYSTEM ==========
