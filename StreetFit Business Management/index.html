@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreetFit | Business Manager</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</head>
+
+<body>
+    <div class="menu-toggle" id="menuToggle">
+        <i class="fas fa-bars"></i>
+    </div>
+    <div class="mobile-header-fix">
+        <div class="header-spacer"></div>
+        <h2 class="text-gold" style="font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; font-style: italic;">
+            StreetFit</h2>
+        <div class="profile-container">
+            <div class="profile-btn" onclick="document.getElementById('userRoleBadgeMobile').classList.toggle('show')">
+                <i class="fas fa-user-circle"></i>
+            </div>
+            <div id="userRoleBadgeMobile" class="badge badge-pending">Partner (Guest)</div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="brand-area">
+                <h2>StreetFit</h2>
+            </div>
+            <a href="index.html" class="nav-link active"><i class="fas fa-chart-line"></i> Dashboard</a>
+            <a href="contributions.html" class="nav-link"><i class="fas fa-hand-holding-usd"></i>
+                Contributions</a>
+            <a href="expenses.html" class="nav-link"><i class="fas fa-receipt"></i> Expenses</a>
+            <a href="plans.html" class="nav-link"><i class="fas fa-tasks"></i> Plans</a>
+            <a href="team.html" class="nav-link"><i class="fas fa-users-cog"></i> Manage Team</a>
+
+            <div style="margin-top: auto; padding-top: 2rem; border-top: 1px solid var(--border);">
+                <button id="logoutBtn" onclick="window.auth.logout()" class="btn btn-ghost hidden"
+                    style="color: #ef4444; width: 100%; text-align: left; padding: 0.75rem 1rem;">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="flex-between" style="margin-bottom: 2rem;">
+                <h1>Dashboard</h1>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="btn btn-ghost admin-only hidden"
+                        style="width: auto; padding: 0.5rem; color: var(--accent);" onclick="showModal('reportModal')">
+                        <i class="fas fa-file-pdf"></i> <span class="hide-mobile">Generate Report</span>
+                    </button>
+                    <a href="auth.html" id="headerLoginBtn" class="btn btn-primary hidden"
+                        style="width: auto; padding: 0.5rem 1rem;">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                    <div class="profile-container hide-mobile">
+                        <div class="profile-btn"
+                            onclick="document.getElementById('userRoleBadge').classList.toggle('show')">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div id="userRoleBadge" class="badge badge-pending">Partner (Guest)</div>
+                    </div>
+                </div>
+            </header>
+
+
+            <!-- Guest Banner (Shown to Guests or Pending users) -->
+            <div id="guestJoinBanner" class="card"
+                style="display: none; padding: 2.5rem 1.5rem; text-align: center; background: white; border: 1px solid var(--border); margin: 2rem 0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                <div
+                    style="width: 80px; height: 80px; background: rgba(59, 130, 246, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: var(--accent);">
+                    <i class="fas fa-users" style="font-size: 2.5rem;"></i>
+                </div>
+                <h2 id="guestBannerTitle" style="font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--text-dark);">
+                    Welcome
+                    to StreetFit</h2>
+                <p id="guestBannerText"
+                    style="color: var(--text-muted); margin-bottom: 2rem; max-width: 400px; margin-left: auto; margin-right: auto;">
+                    To view business stats and start contributing, you must be a member of the team.
+                </p>
+                <div id="guestActionArea">
+                    <button id="joinTeamBtn" class="btn btn-primary" onclick="handleJoinRequest()"
+                        style="width: auto; padding: 0.875rem 2.5rem; font-weight: 600;">
+                        <i class="fas fa-plus"></i> Join Team
+                    </button>
+                    <div id="pendingStatus" class="hidden" style="color: var(--accent); font-weight: 600;">
+                        <i class="fas fa-clock"></i> Your request is pending admin approval...
+                    </div>
+                </div>
+            </div>
+
+            <div id="dashboardContent">
+                <!-- Stats Grid (6 cards total for 3 rows x 2 columns on mobile) -->
+                <div class="stats-grid">
+                    <div class="card stat-card">
+                        <div class="flex-between">
+                            <h3>Total Budget</h3>
+                            <i class="fas fa-edit admin-only hidden" id="editBudgetIcon"
+                                style="cursor: pointer; color: var(--accent); font-size: 0.875rem;"
+                                onclick="showModal('editBudgetModal')"></i>
+                        </div>
+                        <div class="value" id="totalBudget" style="color: var(--accent);">₹0</div>
+                    </div>
+                    <div class="card stat-card">
+                        <h3>Total Capital</h3>
+                        <div class="value" id="totalCapital">₹0</div>
+                    </div>
+                    <div class="card stat-card">
+                        <h3>Current Balance</h3>
+                        <div class="value" id="currentBalance" style="color: var(--success);">₹0</div>
+                    </div>
+                    <div class="card stat-card">
+                        <h3>Approved Expenses</h3>
+                        <div class="value" id="approvedExpenses" style="color: var(--danger);">₹0</div>
+                    </div>
+                    <div class="card stat-card">
+                        <h3>Pending Expenses</h3>
+                        <div class="value" id="pendingExpenses" style="color: var(--warning);">₹0</div>
+                    </div>
+                    <div class="card stat-card"
+                        style="border: 1px solid var(--accent); background: rgba(59, 130, 246, 0.05);">
+                        <h3 style="color: var(--accent);">Active Plans</h3>
+                        <div class="value" id="activePlans">0</div>
+                    </div>
+                </div>
+
+                <!-- Readiness Bar -->
+                <div class="card">
+                    <div class="flex-between">
+                        <h3 style="font-size: 1rem;">Financial Readiness</h3>
+                        <span id="readinessPercent" font-weight="700">0%</span>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                    <p style="font-size: 0.75rem; color: var(--text-muted);">Calculated against Total Budget.</p>
+                </div>
+
+                <!-- Personal Split Card -->
+                <div id="personalStatusCard" class="card hidden">
+                    <div class="flex-between">
+                        <h3 style="font-size: 1.125rem; color: var(--primary);">My Contribution Status</h3>
+                        <i class="fas fa-hand-holding-usd" style="color: var(--accent);"></i>
+                    </div>
+
+                    <div style="margin: 1.5rem 0; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div>
+                            <p style="font-size: 0.75rem; color: var(--text-muted);">Your Share (Split)</p>
+                            <div class="value" id="personalShare" style="font-size: 1.25rem;">₹0</div>
+                        </div>
+                        <div>
+                            <p style="font-size: 0.75rem; color: var(--text-muted);">You've Paid</p>
+                            <div class="value" id="personalPaid" style="font-size: 1.25rem; color: var(--success);">₹0
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="progress-container" style="height: 8px; margin-bottom: 1rem;">
+                        <div class="progress-bar" id="personalProgress" style="background: var(--accent);"></div>
+                    </div>
+
+                    <div id="paymentReminder" class="badge"
+                        style="width: 100%; text-align: center; padding: 0.75rem; display: block; font-size: 0.875rem;">
+                        Checking status...
+                    </div>
+
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 1rem; text-align: center;">
+                        Budget is split equally among <span id="partnerCount">0</span> registered partners.
+                    </p>
+                </div>
+
+            </div>
+            <!-- Create Team Banner: shown OUTSIDE dashboardContent so guests can see it when no admin exists yet -->
+            <div id="createTeamBanner" class="card"
+                style="display: none; background: linear-gradient(135deg, var(--accent), #1d4ed8); color: white; border: none; margin-top: 2rem;">
+                <div class="flex-between" style="flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h2 style="color: white; margin-bottom: 0.25rem;">Start Your Business Team</h2>
+                        <p style="opacity: 0.9; font-size: 0.875rem;">You're the first member! Set up the workspace to
+                            manage budgets, expenses, and partners.</p>
+                    </div>
+                    <button class="btn"
+                        style="background: white; color: var(--accent); width: auto; padding: 0.75rem 1.5rem;"
+                        onclick="handleCreateTeam()">
+                        <i class="fas fa-plus"></i> Create Team Now
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Report Selection Modal -->
+    <div id="reportModal" class="hidden"
+        style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1100; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+        <div class="card" style="width: 100%; max-width: 400px; margin-bottom: 0;">
+            <h3>Monthly Financial Report</h3>
+            <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem;">Select month and year to
+                generate summary.</p>
+            <div class="form-group">
+                <label>Report Period</label>
+                <select id="reportPeriod" onchange="toggleReportPeriodFields()">
+                    <option value="single">Specific Month</option>
+                    <option value="last3">Last 3 Months</option>
+                    <option value="last6">Last 6 Months</option>
+                </select>
+            </div>
+            <div id="monthSelectorGroup">
+                <div class="form-group">
+                    <label>Month</label>
+                    <select id="reportMonth">
+                        <option value="0">January</option>
+                        <option value="1">February</option>
+                        <option value="2">March</option>
+                        <option value="3">April</option>
+                        <option value="4">May</option>
+                        <option value="5">June</option>
+                        <option value="6">July</option>
+                        <option value="7">August</option>
+                        <option value="8">September</option>
+                        <option value="9">October</option>
+                        <option value="10">November</option>
+                        <option value="11">December</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Year</label>
+                    <input type="number" id="reportYear" value="2025">
+                </div>
+            </div>
+            <div class="flex-between" style="gap: 1rem;">
+                <button type="button" class="btn btn-ghost" onclick="hideModal('reportModal')">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="generatePDFReport()">Download PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Budget Modal -->
+    <div id="editBudgetModal" class="hidden"
+        style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1100; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+        <div class="card" style="width: 100%; max-width: 400px; margin-bottom: 0;">
+            <h3>Update Total Budget</h3>
+            <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem;">Set your overall financial
+                goal for the business.</p>
+            <form id="budgetForm">
+                <div class="form-group">
+                    <label>Amount (₹)</label>
+                    <input type="number" id="newBudgetValue" required placeholder="50000">
+                </div>
+                <div class="flex-between" style="gap: 1rem;">
+                    <button type="button" class="btn btn-ghost" onclick="hideModal('editBudgetModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Budget</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bottom Nav (Mobile) -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="bottom-nav-item active">
+            <i class="fas fa-chart-line"></i>
+            <span>Dash</span>
+        </a>
+        <a href="expenses.html" class="bottom-nav-item">
+            <i class="fas fa-receipt"></i>
+            <span>Exp</span>
+        </a>
+        <a href="plans.html" class="bottom-nav-item">
+            <i class="fas fa-tasks"></i>
+            <span>Plans</span>
+        </a>
+        <a href="team.html" class="bottom-nav-item">
+            <i class="fas fa-users-cog"></i>
+            <span>Team</span>
+        </a>
+        <a href="contributions.html" class="bottom-nav-item">
+            <i class="fas fa-hand-holding-usd"></i>
+            <span>Contribs</span>
+        </a>
+    </nav>
+
+    <!-- FAB -->
+    <a href="expenses.html?action=add" class="btn-fab">
+        <i class="fas fa-plus"></i>
+    </a>
+
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+    <script>
+        async function handleCreateTeam() {
+            if (!confirm("Are you sure you want to initialize this business team? You will become the Admin of this workspace.")) return;
+
+            try {
+                const { data, error } = await window.auth.createTeam();
+                if (error) alert("Error: " + error.message);
+                else {
+                    alert("Team created successfully! You are now the Admin.");
+                    window.location.reload();
+                }
+            } catch (err) {
+                alert("An unexpected error occurred.");
+            }
+        }
+
+        // Instant Cache Loader for "Zero Wait" experience
+        function loadDashCache() {
+            const cached = localStorage.getItem('sf_dash_cache');
+            const userCached = JSON.parse(sessionStorage.getItem('sf_user_cache') || 'null');
+
+            if (cached && userCached) {
+                const data = JSON.parse(cached);
+                // ONLY show cached numbers if they belong to the person currently in the session
+                if (data.owner_uid === userCached.id) {
+                    updateDashUI(data);
+                }
+            }
+        }
+
+        function updateDashUI(data) {
+            if (!data) return;
+            document.getElementById('totalCapital').textContent = `₹${data.totalCapital.toLocaleString()}`;
+            document.getElementById('totalBudget').textContent = `₹${data.finalBudget.toLocaleString()}`;
+            document.getElementById('approvedExpenses').textContent = `₹${data.approvedExp.toLocaleString()}`;
+            document.getElementById('currentBalance').textContent = `₹${data.balance.toLocaleString()}`;
+            document.getElementById('pendingExpenses').textContent = `₹${data.pendingExpVal.toLocaleString()}`;
+            document.getElementById('activePlans').textContent = data.activePlansCount;
+
+            document.getElementById('readinessPercent').textContent = `${data.readiness}%`;
+            document.getElementById('progressBar').style.width = `${data.readiness}%`;
+
+            // Personal Status Card Update
+            const statusCard = document.getElementById('personalStatusCard');
+            if (data.showPersonal) {
+                statusCard.classList.remove('hidden');
+                document.getElementById('personalShare').textContent = `₹${Math.round(data.personalShare).toLocaleString()}`;
+                document.getElementById('personalPaid').textContent = `₹${data.totalUserPaid.toLocaleString()}`;
+                document.getElementById('partnerCount').textContent = data.partnerCount;
+                document.getElementById('personalProgress').style.width = `${data.paidPercent}%`;
+
+                const reminderEl = document.getElementById('paymentReminder');
+                if (data.remaining > 0) {
+                    reminderEl.textContent = `Pending: ₹${Math.round(data.remaining).toLocaleString()} more to pay.`;
+                    reminderEl.className = 'badge badge-pending';
+                } else {
+                    reminderEl.textContent = 'Great! Your share is fully paid.';
+                    reminderEl.className = 'badge badge-approved';
+                }
+            } else {
+                statusCard?.classList.add('hidden');
+            }
+        }
+
+        async function handleJoinRequest() {
+            const user = await window.auth.getCurrentUser();
+            if (!user) return;
+            const btn = document.getElementById('joinTeamBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Requesting...';
+
+            const { error } = await window.auth.joinTeam(user.id);
+            if (error) {
+                alert("Error: " + error.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-plus"></i> Join Team';
+            } else {
+                // Refresh UI
+                initDashboard();
+            }
+        }
+
+        async function initDashboard() {
+            loadDashCache();
+            const user = await checkAuth();
+
+            // Fetch Data
+            // Fetch Data in parallel for better performance
+            const [
+                { data: contributions },
+                { data: expenses },
+                { data: plans },
+                { data: allProfiles },
+                manualBudget
+            ] = await Promise.all([
+                window.db.getContributions(),
+                window.db.getExpenses(),
+                window.db.getPlans(),
+                window.db.getProfiles(),
+                window.db.getSetting('target_budget')
+            ]);
+
+            // Toggle Edit Icon for Admin
+            const isAdmin = user && user.profile?.role === 'admin';
+            const isPartner = user && user.profile?.role === 'partner';
+            const isGuest = user && user.profile?.role === 'guest';
+            const isPending = user && user.profile?.role === 'pending';
+
+            if (isAdmin) document.getElementById('editBudgetIcon')?.classList.remove('hidden');
+
+            // Determine if any admin already exists in the system
+            const anyAdminExists = allProfiles && allProfiles.some(p => p.role === 'admin');
+
+            // Handle Visibility based on Role
+            const guestBanner = document.getElementById('guestJoinBanner');
+            const dashContent = document.getElementById('dashboardContent');
+            const createTeamBanner = document.getElementById('createTeamBanner');
+
+            if (isGuest || isPending) {
+                dashContent.style.display = 'none';
+
+                if (isPending) {
+                    // Pending: waiting for admin approval
+                    guestBanner.style.display = 'block';
+                    if (createTeamBanner) createTeamBanner.style.display = 'none';
+                    document.getElementById('guestBannerTitle').textContent = "Request Pending";
+                    document.getElementById('guestBannerText').textContent = "Your request to join the StreetFit team is awaiting administrator approval. Please check back later.";
+                    document.getElementById('joinTeamBtn').classList.add('hidden');
+                    document.getElementById('pendingStatus').classList.remove('hidden');
+                } else if (!anyAdminExists) {
+                    // Guest + No admin exists yet → First user! Show "Create Team"
+                    guestBanner.style.display = 'none';
+                    if (createTeamBanner) createTeamBanner.style.display = 'block';
+                } else {
+                    // Guest + Admin already exists → Show "Join Team" request flow
+                    guestBanner.style.display = 'block';
+                    if (createTeamBanner) createTeamBanner.style.display = 'none';
+                }
+            } else {
+                // Approved member (admin or partner): show dashboard, hide banners
+                guestBanner.style.display = 'none';
+                if (createTeamBanner) createTeamBanner.style.display = 'none';
+                dashContent.style.display = 'block';
+            }
+
+            // Calculations
+            const totalCapital = (contributions || []).reduce((sum, c) => sum + c.amount, 0);
+            const approvedExp = (expenses || []).filter(e => e.status === 'approved').reduce((sum, e) => sum + e.amount, 0);
+            const pendingExpVal = (expenses || []).filter(e => e.status === 'pending').reduce((sum, e) => sum + e.amount, 0);
+            const balance = totalCapital - approvedExp;
+
+            const activePlans = (plans || []).filter(p => p.status === 'pending');
+            const plansSum = activePlans.reduce((sum, p) => sum + p.estimated_cost, 0);
+
+            // Use manual budget if set, otherwise fallback to plans sum
+            const finalBudget = manualBudget > 0 ? manualBudget : plansSum;
+            const readiness = finalBudget > 0 ? Math.min(Math.round((balance / finalBudget) * 100), 100) : 100;
+
+            // Personal Split Calculations (Admin is also a team member)
+            const teamMembers = (allProfiles || []).filter(p => p.role === 'partner' || p.role === 'admin');
+            const partnerCount = teamMembers.length || 1;
+            const personalShare = finalBudget / partnerCount;
+            const userContributions = (contributions || []).filter(c => c.partner_id === user?.id);
+            const totalUserPaid = userContributions.reduce((sum, c) => sum + c.amount, 0);
+            const remaining = Math.max(0, personalShare - totalUserPaid);
+            const paidPercent = Math.min(100, Math.round((totalUserPaid / personalShare) * 100)) || 0;
+
+            // Package data for cache & UI update
+            const dashData = {
+                owner_uid: user?.id,
+                totalCapital, approvedExp, pendingExpVal, balance,
+                activePlansCount: activePlans.length, finalBudget, readiness,
+                showPersonal: user && user.profile && (user.profile.role === 'partner' || user.profile.role === 'admin'),
+                personalShare, totalUserPaid, partnerCount, paidPercent, remaining
+            };
+
+            updateDashUI(dashData);
+            localStorage.setItem('sf_dash_cache', JSON.stringify(dashData));
+
+            // Set input value in modal
+            document.getElementById('newBudgetValue').value = manualBudget;
+
+            // Set default year for report
+            document.getElementById('reportYear').value = new Date().getFullYear();
+            document.getElementById('reportMonth').value = new Date().getMonth();
+        }
+
+        function toggleReportPeriodFields() {
+            const period = document.getElementById('reportPeriod').value;
+            const group = document.getElementById('monthSelectorGroup');
+            group.style.display = period === 'single' ? 'block' : 'none';
+        }
+
+        async function generatePDFReport() {
+            const period = document.getElementById('reportPeriod').value;
+            const month = parseInt(document.getElementById('reportMonth').value);
+            const year = parseInt(document.getElementById('reportYear').value);
+
+            const now = new Date();
+            let startDate = new Date(year, month, 1);
+            let endDate = new Date(year, month + 1, 0, 23, 59, 59);
+            let titleRange = "";
+
+            if (period === 'last3') {
+                startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+                endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+                titleRange = "Last 3 Months";
+            } else if (period === 'last6') {
+                startDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+                endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+                titleRange = "Last 6 Months";
+            } else {
+                titleRange = `${document.getElementById('reportMonth').options[month].text} ${year}`;
+            }
+
+            const { data: contribs } = await window.db.getContributions();
+            const { data: expenses } = await window.db.getExpenses();
+
+            const filteredContribs = (contribs || []).filter(c => {
+                const date = new Date(c.date);
+                return date >= startDate && date <= endDate;
+            });
+
+            const filteredExpenses = (expenses || []).filter(e => {
+                const date = new Date(e.created_at);
+                return date >= startDate && date <= endDate;
+            });
+
+            const totalIn = filteredContribs.reduce((sum, c) => sum + c.amount, 0);
+            const totalOut = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Header
+            doc.setFontSize(22);
+            doc.setTextColor(15, 23, 42); // --primary color
+            doc.text('StreetFit Business Report', 14, 20);
+
+            doc.setFontSize(12);
+            doc.setTextColor(100, 116, 139); // --text-muted
+            doc.text(`Financial Summary: ${titleRange}`, 14, 30);
+            doc.text(`Period: ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`, 14, 37);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 44);
+
+            // Summary Table
+            doc.autoTable({
+                startY: 52,
+                head: [['Category', 'Amount (INR)']],
+                body: [
+                    ['Total Contributions (In)', totalIn.toLocaleString()],
+                    ['Total Expenses (Out)', totalOut.toLocaleString()],
+                    ['Net Cash Flow', (totalIn - totalOut).toLocaleString()]
+                ],
+                theme: 'striped',
+                headStyles: { fillColor: [59, 130, 246] } // --accent
+            });
+
+            // Contributions Table
+            doc.setFontSize(14);
+            doc.setTextColor(15, 23, 42);
+            doc.text('Detailed Contributions', 14, doc.lastAutoTable.finalY + 15);
+
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 20,
+                head: [['Date', 'Partner', 'Amount (INR)']],
+                body: filteredContribs.map(c => [
+                    new Date(c.date).toLocaleDateString(),
+                    c.profiles?.username || 'Unknown',
+                    c.amount.toLocaleString()
+                ]),
+                theme: 'grid'
+            });
+
+            // Expenses Table
+            doc.setFontSize(14);
+            doc.text('Detailed Expenses', 14, doc.lastAutoTable.finalY + 15);
+
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 20,
+                head: [['Date', 'Description', 'By', 'Status', 'Amount (INR)']],
+                body: filteredExpenses.map(e => [
+                    new Date(e.created_at).toLocaleDateString(),
+                    e.description,
+                    e.profiles?.username || 'Guest',
+                    e.status.toUpperCase(),
+                    e.amount.toLocaleString()
+                ]),
+                theme: 'grid'
+            });
+
+            const safeTitle = titleRange.replace(/\s+/g, '_');
+            doc.save(`StreetFit_Report_${safeTitle}.pdf`);
+            hideModal('reportModal');
+        }
+
+        document.getElementById('budgetForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newValue = parseFloat(document.getElementById('newBudgetValue').value);
+            const btn = e.target.querySelector('button[type="submit"]');
+
+            btn.disabled = true;
+            btn.textContent = 'Updating...';
+
+            await window.db.updateSetting('target_budget', newValue);
+
+            hideModal('editBudgetModal');
+            initDashboard();
+            btn.disabled = false;
+            btn.textContent = 'Update Budget';
+        });
+
+        function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function hideModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        window.addEventListener('load', initDashboard);
+    </script>
+</body>
+
+</html>

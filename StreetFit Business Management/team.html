@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Team | StreetFit Business Manager</title>
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='black'/%3E%3Cdefs%3E%3ClinearGradient id='gold' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23FFD700;stop-opacity:1' /%3E%3Cstop offset='50%25' style='stop-color:%23D4AF37;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23B8860B;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Ctext x='50%25' y='72%25' text-anchor='middle' font-family='Outfit, Arial Black, sans-serif' font-weight='900' font-size='60' font-style='italic' fill='url(%23gold)' style='filter:drop-shadow(2px 2px 2px rgba(0,0,0,0.5))'%3ESF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+
+<body>
+    <div class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></div>
+    <div class="mobile-header-fix">
+        <div class="header-spacer"></div>
+        <h2 style="font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; color: var(--primary);">StreetFit</h2>
+        <div class="profile-container">
+            <div class="profile-btn" onclick="document.getElementById('userRoleBadgeMobile').classList.toggle('show')">
+                <i class="fas fa-user-circle"></i>
+            </div>
+            <div id="userRoleBadgeMobile" class="badge badge-pending">Admin</div>
+        </div>
+    </div>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="brand-area">
+                <h2>StreetFit</h2>
+            </div>
+            <a href="index.html" class="nav-link"><i class="fas fa-chart-line"></i> Dashboard</a>
+            <a href="contributions.html" class="nav-link"><i class="fas fa-hand-holding-usd"></i> Contributions</a>
+            <a href="expenses.html" class="nav-link"><i class="fas fa-receipt"></i> Expenses</a>
+            <a href="plans.html" class="nav-link"><i class="fas fa-tasks"></i> Plans</a>
+            <a href="team.html" class="nav-link active"><i class="fas fa-users-cog"></i> Manage Team</a>
+
+            <div style="margin-top: auto; padding-top: 2rem; border-top: 1px solid var(--border);">
+                <button id="logoutBtn" onclick="window.auth.logout()" class="btn btn-ghost"
+                    style="color: #ef4444; width: 100%; text-align: left; padding: 0.75rem 1rem;">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="flex-between" style="margin-bottom: 2rem;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <h1>Manage Team</h1>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="btn btn-primary admin-only hidden" style="width: auto; padding: 0.5rem 1rem;"
+                        onclick="showModal('addMemberModal')">
+                        <i class="fas fa-plus"></i> Add Member
+                    </button>
+                    <div class="profile-container hide-mobile">
+                        <div class="profile-btn"
+                            onclick="document.getElementById('userRoleBadge').classList.toggle('show')">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div id="userRoleBadge" class="badge badge-approved">Admin</div>
+                    </div>
+                </div>
+            </header>
+
+            <div id="guestJoinBanner" class="card"
+                style="display: none; padding: 4rem 2rem; text-align: center; background: white; border: 1px solid var(--border); margin: 2rem 0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                <div
+                    style="width: 80px; height: 80px; background: rgba(59, 130, 246, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: var(--accent);">
+                    <i class="fas fa-users" style="font-size: 2.5rem;"></i>
+                </div>
+                <h2 id="guestBannerTitle" style="font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--text-dark);">
+                    Welcome
+                    to StreetFit</h2>
+                <p id="guestBannerText"
+                    style="color: var(--text-muted); margin-bottom: 2rem; max-width: 400px; margin-left: auto; margin-right: auto;">
+                    To view the team and manage members, you must be a member of the team.
+                </p>
+                <div id="guestActionArea">
+                    <a href="index.html" class="btn btn-primary"
+                        style="width: auto; padding: 0.875rem 2.5rem; font-weight: 600; display: inline-block;">
+                        <i class="fas fa-arrow-left"></i> Go to Join Team
+                    </a>
+                    <div id="pendingStatus" class="hidden"
+                        style="color: var(--accent); font-weight: 600; margin-top: 1rem;">
+                        <i class="fas fa-clock"></i> Your request is pending admin approval...
+                    </div>
+                </div>
+            </div>
+
+            <div id="teamContent">
+                <div id="pendingContainer" class="card admin-only hidden"
+                    style="background: rgba(59, 130, 246, 0.05); border: 1px dashed var(--accent); display: none;">
+                    <h3 style="color: var(--accent);"><i class="fas fa-clock"></i> Pending Join Requests</h3>
+                    <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.5rem;">
+                        Users who signed up independently. Approve them to grant access to team data.
+                    </p>
+                    <div id="pendingList" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <!-- Pending members here -->
+                    </div>
+                </div>
+                <h3>Team Members</h3>
+                <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.5rem;">
+                    Promote partners to Admin to let them approve expenses and manage finances.
+                </p>
+                <div id="teamList" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading team members...
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Member Modal -->
+    <div id="addMemberModal" class="hidden"
+        style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1100; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+        <div class="card" style="width: 100%; max-width: 400px; margin-bottom: 0;">
+            <h3>Add Team Member</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Create a new partner account.
+                They can use these details to login.</p>
+            <form id="addMemberForm" style="margin-top: 1.5rem;">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="newUsername" placeholder="e.g. rahul_k" required>
+                </div>
+                <div class="form-group">
+                    <label>Initial Password</label>
+                    <input type="password" id="newPassword" placeholder="••••••••" required>
+                </div>
+                <div class="flex-between" style="gap: 1rem; margin-top: 2rem;">
+                    <button type="button" class="btn btn-ghost" onclick="hideModal('addMemberModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bottom Nav (Mobile) -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="bottom-nav-item">
+            <i class="fas fa-chart-line"></i>
+            <span>Dash</span>
+        </a>
+        <a href="expenses.html" class="bottom-nav-item">
+            <i class="fas fa-receipt"></i>
+            <span>Exp</span>
+        </a>
+        <a href="plans.html" class="bottom-nav-item">
+            <i class="fas fa-tasks"></i>
+            <span>Plans</span>
+        </a>
+        <a href="team.html" class="bottom-nav-item active">
+            <i class="fas fa-users-cog"></i>
+            <span>Team</span>
+        </a>
+        <a href="contributions.html" class="bottom-nav-item">
+            <i class="fas fa-hand-holding-usd"></i>
+            <span>Contribs</span>
+        </a>
+    </nav>
+
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+    <script>
+        function renderTeamUI(allProfiles, isAdmin, currentUserId) {
+            const teamList = document.getElementById('teamList');
+            const pendingList = document.getElementById('pendingList');
+            const pendingContainer = document.getElementById('pendingContainer');
+
+            // 1. Handle Pending Users (Admin Only)
+            const pendingUsers = allProfiles.filter(p => p.role === 'pending');
+            if (isAdmin && pendingUsers.length > 0) {
+                pendingContainer.style.display = 'block';
+                pendingList.innerHTML = pendingUsers.map(p => `
+                    <div class="card" style="margin-bottom: 0; padding: 1rem; border: 1px solid var(--accent);">
+                         <div class="flex-between">
+                            <div>
+                                <div style="font-weight: 700;">${(p.username || 'Unknown').toUpperCase()}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">Requested access</div>
+                            </div>
+                            <button class="btn btn-primary" style="width: auto; padding: 0.5rem 1rem;" onclick="approveUser('${p.id}')">
+                                <i class="fas fa-check"></i> Approve
+                            </button>
+                         </div>
+                    </div>
+                `).join('');
+            } else {
+                pendingContainer.style.display = 'none';
+            }
+
+            // 2. Handle Approved Users
+            const approvedProfiles = allProfiles.filter(p => p.role === 'admin' || p.role === 'partner');
+            teamList.innerHTML = approvedProfiles.sort((a, b) => (a.username || '').localeCompare(b.username)).map(p => {
+                const isSelf = p.id === currentUserId;
+                const isUserAdmin = p.role === 'admin';
+                const capitalized = (p.username || 'Unknown').charAt(0).toUpperCase() + (p.username || 'Unknown').slice(1);
+
+                return `
+                    <div class="card" style="margin-bottom: 0; padding: 1rem; border: 1px solid ${isUserAdmin ? 'var(--accent)' : 'var(--border)'}; background: ${isUserAdmin ? 'rgba(59, 130, 246, 0.05)' : 'white'};">
+                        <div class="flex-between">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="width: 40px; height: 40px; border-radius: 50%; background: ${isUserAdmin ? 'var(--accent)' : 'var(--border)'}; display: flex; align-items: center; justify-content: center; color: white;">
+                                    <i class="fas ${isUserAdmin ? 'fa-user-shield' : 'fa-user'}"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 700;">${capitalized} ${isSelf ? '<span style="color: var(--primary); font-size: 0.75rem;">(You)</span>' : ''}</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-muted);">${isUserAdmin ? 'Administrator' : 'Partner'}</div>
+                                </div>
+                            </div>
+                            
+                            ${isAdmin && !isSelf ? `
+                                <button class="btn btn-ghost" 
+                                    style="width: auto; min-height: auto; padding: 0.5rem 1rem; font-size: 0.875rem; border: 1px solid ${isUserAdmin ? 'var(--danger)' : 'var(--accent)'}; color: ${isUserAdmin ? 'var(--danger)' : 'var(--accent)'};"
+                                    onclick="toggleAdminRole('${p.id}', '${capitalized}', ${isUserAdmin})">
+                                    ${isUserAdmin ? 'Revoke Admin' : 'Make Admin'}
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Load cached team data instantly on page load
+        function loadTeamCache() {
+            const cachedProfiles = localStorage.getItem('sf_team_cache');
+            const userCache = JSON.parse(sessionStorage.getItem('sf_user_cache') || 'null');
+            if (cachedProfiles && userCache) {
+                const isAdmin = userCache?.profile?.role === 'admin';
+                renderTeamUI(JSON.parse(cachedProfiles), isAdmin, userCache.id);
+            }
+        }
+
+        async function loadTeam() {
+            loadTeamCache(); // Show cached data instantly
+
+            const user = await checkAuth();
+            if (!user) return;
+            const isAdmin = user.profile?.role === 'admin';
+
+            const { data: allProfiles } = await window.db.getProfiles();
+            if (!allProfiles) return;
+
+            renderTeamUI(allProfiles, isAdmin, user.id);
+
+            // Save to cache for next load
+            localStorage.setItem('sf_team_cache', JSON.stringify(allProfiles));
+        }
+
+        async function toggleAdminRole(uid, name, isAdmin) {
+            const action = isAdmin ? 'revoke Admin access from' : 'promote';
+            const targetRole = isAdmin ? 'partner' : 'admin';
+
+            if (!confirm(`Are you sure you want to ${action} "${name}"?`)) return;
+
+            const { error } = await window.auth.updateUserRole(uid, targetRole);
+            if (error) alert('Error: ' + error.message);
+            else {
+                alert(`Success! ${name} is now a ${targetRole}.`);
+                loadTeam();
+            }
+        }
+
+        async function approveUser(uid) {
+            const { error } = await window.auth.approveMember(uid);
+            if (error) alert("Error: " + error.message);
+            else {
+                alert("User approved successfully!");
+                loadTeam();
+            }
+        }
+
+        document.getElementById('addMemberForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('newUsername').value;
+            const password = document.getElementById('newPassword').value;
+
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+
+            try {
+                const { data, error } = await window.auth.createMember(username, password);
+                if (error) {
+                    alert("Error: " + error.message);
+                } else {
+                    alert(`Successfully created account for ${username}!`);
+                    e.target.reset();
+                    hideModal('addMemberModal');
+                    loadTeam();
+                }
+            } catch (err) {
+                alert("An unexpected error occurred.");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Create Account';
+            }
+        });
+
+        window.addEventListener('load', loadTeam);
+    </script>
+</body>
+
+</html>
